@@ -131,6 +131,13 @@ function Player(position) {
   this.spritesheet.src = encodeURI('assets/PlayerSprite2.png');
   this.timer = 0;
   this.frame = 0;
+  this.sheet = 0;
+
+  var self = this;
+  window.onmousedown = function(event) {
+    self.sheet = (self.sheet == 0) ? 1 : 0;
+    self.frame = 0;
+  }
 }
 
 /**
@@ -140,6 +147,7 @@ function Player(position) {
 Player.prototype.update = function(time) {
   switch(this.state) {
     case "idle":
+    case "jump":
       this.timer += time;
       if(this.timer > MS_PER_FRAME) {
         this.timer = 0;
@@ -158,17 +166,23 @@ Player.prototype.update = function(time) {
  */
 Player.prototype.render = function(time, ctx) {
   switch(this.state) {
+    case "jump":
     case "idle":
       ctx.drawImage(
         // image
         this.spritesheet,
         // source rectangle
-        this.frame * 64, 64, this.width, this.height,
+        this.frame * 64, this.sheet * 64, this.width, this.height,
         // destination rectangle
         this.x, this.y, this.width, this.height
       );
       break;
     // TODO: Implement your player's redering according to state
+  }
+
+  if(this.sheet == 0 && this.frame == 3){
+    this.sheet = 1;
+    this.frame = 0;
   }
 }
 
