@@ -113,11 +113,11 @@ function render(elapsedTime, ctx) {
   ctx.fillStyle = "lightblue";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0);
-  /*items.forEach(function(item) {
+  items.forEach(function(item) {
     item.render(elapsedTime, ctx);
-    ctx.beginPath();
-    ctx.rect(item.x, item.y, item.displayWidth, item.displayHeight);
-    ctx.stroke();
-  });*/
+    //ctx.beginPath();
+    //ctx.rect(item.x, item.y, item.displayWidth, item.displayHeight);
+    //ctx.stroke();
+  });
   player.render(elapsedTime, ctx);
 }
