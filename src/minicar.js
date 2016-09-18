@@ -101,7 +101,6 @@ MiniCar.prototype.reset = function(){
  * {CanvasRenderingContext2D} ctx the context to render into
  */
 MiniCar.prototype.render = function(time, ctx) {
-  if(!this.active) return;
   ctx.drawImage(
     // image
     this.sprite,

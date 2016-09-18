@@ -34,11 +34,23 @@ function Player(position) {
   this.height = 64;
   this.displayWidth = this.width;
   this.displayHeight = this.height;
-  this.spritesheet  = new Image();
-  this.spritesheet.src = encodeURI('assets/PlayerSprite2.png');
+
+  this.lives = 3;
+  this.score = 0;
+
+  this.spritesheets = [];
+
+  for(var i = 0; i < 4; i++){
+    this.spritesheets.push(new Image());
+    this.spritesheets[i].src = encodeURI('assets/PlayerSprite' + i + '.png');
+  }
+  this.spriteIndex  = 2;
+  this.disableInput = false;
+
   this.timer = 0;
   this.frame = 0;
   this.isOnLog = false;
+  this.isAnimatingLevelComplete = false;
 
   var self = this;
 
@@ -46,6 +58,9 @@ function Player(position) {
     event.preventDefault();
 
     if(self.state == "jump"){
+      return;
+    }
+    if(self.disableInput){
       return;
     }
 
@@ -128,6 +143,44 @@ function Player(position) {
       self.offset = 999;
     }
   }
+  this.animateDeathCar = function(){
+    self.spriteIndex = 0;
+    self.disableInput = true;
+  }
+  this.animateDeathWater = function () {
+    self.spriteIndex = 1;
+    self.disableInput = true;
+  }
+  this.resetForDeath = function(){
+    self.x = 0;
+    self.spriteIndex = 2;
+    self.lives--;
+    self.disableInput = false;
+  }
+
+  this.animateLevelComplete = function(){
+    if(self.isAnimatingLevelComplete) return;
+
+    self.isAnimatingLevelComplete = true;
+    self.disableInput = true;
+
+    setTimeout(function(){
+     self.direction = Direction.Right;
+     self.state = "jump";
+    }, 100);
+
+    setTimeout(function(){ self.x = -self.width;}, 600);
+
+    setTimeout(function(){
+     self.direction = Direction.Right;
+     self.state = "jump";
+   }, 900);
+
+    setTimeout(function(){
+      self.disableInput = false;
+      self.isAnimatingLevelComplete = false;
+    }, 1400);
+  }
 
 }
 
@@ -158,7 +211,7 @@ Player.prototype.render = function(time, ctx) {
     case "jump":
       ctx.drawImage(
         // image
-        this.spritesheet,
+        this.spritesheets[this.spriteIndex],
         // source rectangle
         this.frame * 64, SpriteSheet.Jump * 64, this.width, this.height,
         // destination rectangle
@@ -168,7 +221,7 @@ Player.prototype.render = function(time, ctx) {
     case "idle":
       ctx.drawImage(
         // image
-        this.spritesheet,
+        this.spritesheets[this.spriteIndex],
         // source rectangle
         this.frame * 64, SpriteSheet.Idle * 64, this.width, this.height,
         // destination rectangle

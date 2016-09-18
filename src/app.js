@@ -5,14 +5,18 @@ const Game = require('./game.js');
 const Player = require('./player.js');
 const MiniCar = require('./minicar.js');
 const Log = require('./log.js');
-const EntityManager = require('./entitymanager.js')
+const EntityManager = require('./entitymanager.js');
+const Hud = require('./hud.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
 var game = new Game(canvas, update, render);
 var player = new Player({x: 0, y: 240})
 var entityManager = new EntityManager(12, 64, player);
+var hud = new Hud(player, canvas.width, canvas.height);
 var items = [];
+var isResetingForDeath = false;
+var isUpdatingScore = false;
 
 items.push(
   /* Lane 0  */
@@ -72,6 +76,34 @@ function update(elapsedTime) {
     item.resetIfComplete();
   });
 
+  testPlayerCollision();
+
+  if(isPlayerInFinalLane()){
+    player.animateLevelComplete();
+    if(!isUpdatingScore){
+      isUpdatingScore = true;
+      setTimeout(function(){
+        player.score += 10;
+        items.forEach(function(item){
+          // smaller speed means we are going faster
+          items.speed *= 0.8;
+        });
+        isUpdatingScore = false;
+      }, 1000);
+    }
+  }
+  hud.update(elapsedTime);
+}
+
+function resetForDeath() {
+  player.resetForDeath();
+  items.forEach(function(item){
+    item.active = true;
+  });
+  isResetingForDeath = false;
+}
+
+function testPlayerCollision(){
   entityManager.collisionTest(
     function(collidingEntity){
       if(collidingEntity.type == "Log"){
@@ -81,23 +113,36 @@ function update(elapsedTime) {
         player.isOnLog = false;
       }
 
-      if(collidingEntity.type == "MiniCar"){
-        console.log('die');
+      if(collidingEntity.type == "MiniCar" && player.state == "idle"){
+        collidingEntity.active = false;
+        if(!isResetingForDeath){
+          player.animateDeathCar();
+          isResetingForDeath = true;
+          setTimeout(resetForDeath, 300);
+        }
       }
     },
     function(){
       player.isOnLog = false;
-    }
-);
+    });
 
-  if(contains([6, 9, 10], entityManager.getCell(player))){
-    if(!player.isOnLog){
-      console.log('die');
+  if(isPlayerInWaterLane()){
+    if(!player.isOnLog && player.state == "idle"){
+      if(!isResetingForDeath){
+        player.animateDeathWater();
+        isResetingForDeath = true;
+        setTimeout(resetForDeath, 300);
+      }
     }
   }
-
 }
 
+function isPlayerInFinalLane(){
+  return entityManager.getCell(player) == 11;
+}
+function isPlayerInWaterLane(){
+  return contains([6, 9, 10], entityManager.getCell(player));
+}
 function contains(arr, obj){
   return (arr.indexOf(obj) != -1);
 }
@@ -120,4 +165,5 @@ function render(elapsedTime, ctx) {
     //ctx.stroke();
   });
   player.render(elapsedTime, ctx);
+  hud.render(elapsedTime, ctx);
 }
