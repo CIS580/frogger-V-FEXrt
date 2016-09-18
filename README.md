@@ -64,4 +64,9 @@ Mini and Sports Car art was provided by  [bahi](http://opengameart.org/users/bah
 
 Sedan and Pickup art was provided by  [bahi](http://opengameart.org/users/bahi) of [Open Game Art](http://opengameart.org) under a CC-BY license.
 
+Log art was provided by  [Game Developer Studio](http://opengameart.org/users/game-developer-studio) of [Open Game Art](http://opengameart.org) under a CC-BY license.
+
+Background tileset was provided by [Sharm](http://opengameart.org/users/sharm) of [Open Game Art](http://opengameart.org) under a CC-BY license. Modified by [Grimfist](http://opengameart.org/users/grimfist)
+Background was created using [Tiled](http://www.mapeditor.org/)
+
 Game framework HTML5/CSS3/Javascript code was written by course instructor Nathan Bean, and released under a CC-BY license.
