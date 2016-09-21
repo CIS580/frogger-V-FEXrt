@@ -54,9 +54,7 @@ function Player(position) {
 
   var self = this;
 
-  window.onkeydown = function(event) {
-    event.preventDefault();
-
+  this.handleInput = function(event) {
     if(self.state == "jump"){
       return;
     }
@@ -183,6 +181,19 @@ function Player(position) {
   }
 
 }
+
+Player.prototype.reset = function () {
+  this.lives = 3;
+  this.score = 0;
+  this.state = "idle";
+  this.x = 0;
+  this.spriteIndex  = 2;
+  this.disableInput = false;
+  this.timer = 0;
+  this.frame = 0;
+  this.isOnLog = false;
+  this.isAnimatingLevelComplete = false;
+};
 
 /**
  * @function updates the player object

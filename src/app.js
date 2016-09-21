@@ -7,16 +7,50 @@ const MiniCar = require('./minicar.js');
 const Log = require('./log.js');
 const EntityManager = require('./entitymanager.js');
 const Hud = require('./hud.js');
+const AlphaAnimator = require('./alphaanimator.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
 var game = new Game(canvas, update, render);
 var player = new Player({x: 0, y: 240})
 var entityManager = new EntityManager(12, 64, player);
+
+var blackoutAnimator = new AlphaAnimator(1500, function(ctx, alpha){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+});
+
+var blackInAnimator = new AlphaAnimator(2000, function(ctx, alpha){
+  ctx.save();
+  ctx.globalAlpha = 1 - alpha;
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+});
+blackInAnimator.isActive = true;
+
+
+var gameOverTextAnimator = new AlphaAnimator(2000, function(ctx, alpha){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "yellow";
+  ctx.font = "bold 40px Garamond";
+  ctx.textAlign="center";
+  ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2);
+  ctx.font = "bold 24px Garamond";
+  ctx.fillText("Space to play again", canvas.width / 2, canvas.height / 2 + 30 );
+  ctx.restore();
+});
+
 var hud = new Hud(player, canvas.width, canvas.height);
 var items = [];
 var isResetingForDeath = false;
 var isUpdatingScore = false;
+
+var isGameOver = false;
 
 items.push(
   /* Lane 0  */
@@ -61,6 +95,28 @@ var masterLoop = function(timestamp) {
 masterLoop(performance.now());
 
 
+window.onkeydown = function(event) {
+  event.preventDefault();
+
+  if(isGameOver && event.keyCode == 32){
+    resetGame();
+    return;
+  }
+  player.handleInput(event);
+
+  return false;
+}
+
+function resetGame() {
+  player.reset();
+  gameOverTextAnimator.reset();
+  blackoutAnimator.reset();
+  blackInAnimator.reset();
+  blackInAnimator.isActive = true;
+
+  isGameOver = false;
+}
+
 /**
  * @function update
  * Updates the game state, moving
@@ -70,6 +126,14 @@ masterLoop(performance.now());
  * the number of milliseconds passed since the last frame.
  */
 function update(elapsedTime) {
+
+  isGameOver = (player.lives <= 0);
+
+  if(isGameOver){
+    blackoutAnimator.isActive = true;
+    return;
+  }
+
   player.update(elapsedTime);
   items.forEach(function(item){
     item.update(elapsedTime);
@@ -155,8 +219,14 @@ function contains(arr, obj){
   * @param {CanvasRenderingContext2D} ctx the context to render to
   */
 function render(elapsedTime, ctx) {
-  ctx.fillStyle = "lightblue";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if(isGameOver){
+    blackoutAnimator.animate(elapsedTime, ctx);
+    gameOverTextAnimator.isActive = (!blackoutAnimator.isAnimating);
+    gameOverTextAnimator.animate(elapsedTime, ctx);
+    return;
+  }
+
   ctx.drawImage(img, 0, 0);
   items.forEach(function(item) {
     item.render(elapsedTime, ctx);
@@ -166,4 +236,7 @@ function render(elapsedTime, ctx) {
   });
   player.render(elapsedTime, ctx);
   hud.render(elapsedTime, ctx);
+
+  blackInAnimator.animate(elapsedTime, ctx);
+
 }

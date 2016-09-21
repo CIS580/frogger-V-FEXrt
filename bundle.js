@@ -1,4 +1,49 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+"use strict";
+
+/**
+ * @module exports the AlphaAnimator class
+ */
+module.exports = exports = AlphaAnimator;
+
+/**
+ * @constructor AlphaAnimator
+ * Creates a new AlphaAnimator object
+ */
+function AlphaAnimator(length, renderFunction) {
+  this.animationTimer = 0;
+  this.animationLength = length;
+  this.alpha = 0;
+  this.isAnimating = true;
+  this.render = renderFunction;
+  this.isActive = false;
+}
+
+/**
+ * @function animates the AlphaAnimator object
+ * {DOMHighResTimeStamp} time the elapsed time since the last frame
+ */
+AlphaAnimator.prototype.animate = function(time, ctx){
+  if(!this.isActive) return;
+  if(this.isAnimating){
+    this.animationTimer += time;
+    this.alpha = this.animationTimer / this.animationLength;
+    if(this.alpha > 1){
+      this.alpha = 1;
+      this.isAnimating = false;
+    }
+  }
+  this.render(ctx, this.alpha);
+}
+
+AlphaAnimator.prototype.reset = function(){
+  this.animationTimer = 0;
+  this.alpha = 0;
+  this.isAnimating = true;
+  this.isActive = false;
+}
+
+},{}],2:[function(require,module,exports){
 "use strict;"
 
 /* Classes */
@@ -8,16 +53,50 @@ const MiniCar = require('./minicar.js');
 const Log = require('./log.js');
 const EntityManager = require('./entitymanager.js');
 const Hud = require('./hud.js');
+const AlphaAnimator = require('./alphaanimator.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
 var game = new Game(canvas, update, render);
 var player = new Player({x: 0, y: 240})
 var entityManager = new EntityManager(12, 64, player);
+
+var blackoutAnimator = new AlphaAnimator(1500, function(ctx, alpha){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+});
+
+var blackInAnimator = new AlphaAnimator(2000, function(ctx, alpha){
+  ctx.save();
+  ctx.globalAlpha = 1 - alpha;
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+});
+blackInAnimator.isActive = true;
+
+
+var gameOverTextAnimator = new AlphaAnimator(2000, function(ctx, alpha){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "yellow";
+  ctx.font = "bold 40px Garamond";
+  ctx.textAlign="center";
+  ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2);
+  ctx.font = "bold 24px Garamond";
+  ctx.fillText("Space to play again", canvas.width / 2, canvas.height / 2 + 30 );
+  ctx.restore();
+});
+
 var hud = new Hud(player, canvas.width, canvas.height);
 var items = [];
 var isResetingForDeath = false;
 var isUpdatingScore = false;
+
+var isGameOver = false;
 
 items.push(
   /* Lane 0  */
@@ -62,6 +141,28 @@ var masterLoop = function(timestamp) {
 masterLoop(performance.now());
 
 
+window.onkeydown = function(event) {
+  event.preventDefault();
+
+  if(isGameOver && event.keyCode == 32){
+    resetGame();
+    return;
+  }
+  player.handleInput(event);
+
+  return false;
+}
+
+function resetGame() {
+  player.reset();
+  gameOverTextAnimator.reset();
+  blackoutAnimator.reset();
+  blackInAnimator.reset();
+  blackInAnimator.isActive = true;
+
+  isGameOver = false;
+}
+
 /**
  * @function update
  * Updates the game state, moving
@@ -71,6 +172,14 @@ masterLoop(performance.now());
  * the number of milliseconds passed since the last frame.
  */
 function update(elapsedTime) {
+
+  isGameOver = (player.lives <= 0);
+
+  if(isGameOver){
+    blackoutAnimator.isActive = true;
+    return;
+  }
+
   player.update(elapsedTime);
   items.forEach(function(item){
     item.update(elapsedTime);
@@ -156,8 +265,14 @@ function contains(arr, obj){
   * @param {CanvasRenderingContext2D} ctx the context to render to
   */
 function render(elapsedTime, ctx) {
-  ctx.fillStyle = "lightblue";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if(isGameOver){
+    blackoutAnimator.animate(elapsedTime, ctx);
+    gameOverTextAnimator.isActive = (!blackoutAnimator.isAnimating);
+    gameOverTextAnimator.animate(elapsedTime, ctx);
+    return;
+  }
+
   ctx.drawImage(img, 0, 0);
   items.forEach(function(item) {
     item.render(elapsedTime, ctx);
@@ -167,9 +282,12 @@ function render(elapsedTime, ctx) {
   });
   player.render(elapsedTime, ctx);
   hud.render(elapsedTime, ctx);
+
+  blackInAnimator.animate(elapsedTime, ctx);
+
 }
 
-},{"./entitymanager.js":2,"./game.js":3,"./hud.js":4,"./log.js":5,"./minicar.js":6,"./player.js":7}],2:[function(require,module,exports){
+},{"./alphaanimator.js":1,"./entitymanager.js":3,"./game.js":4,"./hud.js":5,"./log.js":6,"./minicar.js":7,"./player.js":8}],3:[function(require,module,exports){
 "use strict";
 
 /**
@@ -221,7 +339,7 @@ function collision(entity1, entity2){
     (entity1.x + entity1.displayWidth < entity2.x))
 }
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 "use strict";
 
 /**
@@ -279,7 +397,7 @@ Game.prototype.loop = function(newTime) {
   this.frontCtx.drawImage(this.backBuffer, 0, 0);
 }
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 "use strict";
 
 /**
@@ -384,7 +502,7 @@ Hud.prototype.render = function(time, ctx) {
   ctx.fillText(this.player.score, centerX, topCenterY + 5);
 }
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 "use strict";
 
 /**
@@ -488,7 +606,7 @@ Log.prototype.render = function(time, ctx) {
   );
 }
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 "use strict";
 
 /**
@@ -602,7 +720,7 @@ MiniCar.prototype.render = function(time, ctx) {
   );
 }
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict";
 
 const MS_PER_FRAME = 1000/8;
@@ -659,9 +777,7 @@ function Player(position) {
 
   var self = this;
 
-  window.onkeydown = function(event) {
-    event.preventDefault();
-
+  this.handleInput = function(event) {
     if(self.state == "jump"){
       return;
     }
@@ -789,6 +905,19 @@ function Player(position) {
 
 }
 
+Player.prototype.reset = function () {
+  this.lives = 3;
+  this.score = 0;
+  this.state = "idle";
+  this.x = 0;
+  this.spriteIndex  = 2;
+  this.disableInput = false;
+  this.timer = 0;
+  this.frame = 0;
+  this.isOnLog = false;
+  this.isAnimatingLevelComplete = false;
+};
+
 /**
  * @function updates the player object
  * {DOMHighResTimeStamp} time the elapsed time since the last frame
@@ -837,4 +966,4 @@ Player.prototype.render = function(time, ctx) {
   }
 }
 
-},{}]},{},[1]);
+},{}]},{},[2]);
